@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ASD Firewall</string>
+    <string name="app_description">Advanced Network Firewall</string>
+    <string name="notification_channel_id">aegis_vpn_channel</string>
+    <string name="notification_channel_name">Firewall Protection</string>
+    <string name="notification_channel_desc">Aegis XII is actively monitoring your network traffic</string>
+    <string name="notification_title">Aegis XII Active</string>
+    <string name="notification_text">Network protection is running</string>
+    <string name="vpn_permission_title">VPN Permission Required</string>
+    <string name="vpn_permission_message">Aegis XII needs VPN access to monitor and filter network traffic. No data leaves your device.</string>
+    <string name="start_protection">Start Protection</string>
+    <string name="stop_protection">Stop Protection</string>
+    <string name="dashboard">Dashboard</string>
+    <string name="packets">Packets</string>
+    <string name="rules">Rules</string>
+    <string name="processes">Processes</string>
+    <string name="threats">Threats</string>
+    <string name="anomalies">Anomalies</string>
+    <string name="connections">Connections</string>
+    <string name="ledger">Ledger</string>
+</resources>

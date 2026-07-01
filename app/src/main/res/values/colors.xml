@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Core palette — matches desktop dashboard exactly -->
+    <color name="bg_dark">#030508</color>
+    <color name="bg_panel">#0C101A</color>
+    <color name="border_color">#1A3040</color>
+
+    <color name="text_main">#E2E8F0</color>
+    <color name="text_muted">#8B9BB4</color>
+    <color name="text_bright">#FFFFFF</color>
+
+    <color name="accent_cyan">#00E5FF</color>
+    <color name="accent_blue">#3B82F6</color>
+    <color name="accent_green">#00E676</color>
+    <color name="accent_red">#FF3355</color>
+    <color name="accent_gold">#FFD700</color>
+    <color name="accent_purple">#A855F7</color>
+    <color name="accent_orange">#FF8C00</color>
+
+    <!-- Notification icon background -->
+    <color name="notification_color">#00E5FF</color>
+</resources>
