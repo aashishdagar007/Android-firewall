@@ -19,4 +19,8 @@
 
     <!-- Notification icon background -->
     <color name="notification_color">#00E5FF</color>
+
+    <!-- Launcher adaptive icon background -->
+    <color name="ic_launcher_background">#0A0F23</color>
 </resources>
+
