@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright © 2015-2021 the original authors.
+# Copyright Â© 2015-2021 the original authors.
 #
 # Gradle start up script for POSIX compatible shells
 #
