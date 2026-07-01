@@ -103,6 +103,9 @@ static std::string rule_to_json(const fw::Rule& r) {
     return j.str();
 }
 
+// Forward declaration for android_packet_parser.cpp (C++ linkage — must be outside extern "C")
+fw::PacketInfo parse_ip_packet(const uint8_t* buf, int len, const std::string& app_name);
+
 // ════════════════════════════════════════════════════════════════
 //  JNI Exports
 // ════════════════════════════════════════════════════════════════
@@ -185,7 +188,6 @@ Java_com_asd_firewall_FirewallEngine_nativeEvaluatePacket(
 
     // Parse the raw IP packet into PacketInfo
     // (android_packet_parser.cpp provides this function)
-    extern fw::PacketInfo parse_ip_packet(const uint8_t* buf, int len, const std::string& app_name);
     fw::PacketInfo pkt = parse_ip_packet(
         reinterpret_cast<const uint8_t*>(buf),
         static_cast<int>(length),
