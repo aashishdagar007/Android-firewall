@@ -55,8 +55,8 @@ class BootReceiver : BroadcastReceiver() {
 
         Log.i(TAG, "Auto-starting Aegis XII firewall service...")
 
-        val serviceIntent = Intent(context, AegisVpnService::class.java).apply {
-            action = AegisVpnService.ACTION_START
+        val serviceIntent = Intent(context, AegisVpnService::class.java).also { intent ->
+            intent.action = AegisVpnService.ACTION_START
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
