@@ -205,7 +205,7 @@ Java_com_asd_firewall_FirewallEngine_nativeEvaluatePacket(
     } else {
         g_engine->stats.blocked++;
         // Log blocked packet to the tamper-proof ledger
-        if (g_engine->ledger.is_open()) {
+        if (g_engine->ledger_open) {
             // ledger entry for blocked packet
         }
     }
@@ -351,7 +351,7 @@ Java_com_asd_firewall_FirewallEngine_nativeGetPackets(
 {
     if (!g_engine) return env->NewStringUTF("[]");
 
-    auto packets = g_engine->ring.snapshot(static_cast<size_t>(n));
+    auto packets = g_engine->ring.tail(static_cast<size_t>(n));
     std::ostringstream j;
     j << "[";
     bool first = true;
