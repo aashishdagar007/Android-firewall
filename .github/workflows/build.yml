@@ -25,18 +25,9 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # ── 3. Set up Android SDK ────────────────────────────────────
-      - name: Set up Android SDK
+      # ── 3. Set up Android SDK (pre-installed on ubuntu-latest) ──
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
-      # ── 4. Install NDK and CMake (required for C++ JNI) ─────────
-      - name: Install NDK and CMake
-        run: |
-          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "ndk;27.0.12077973" \
-            "cmake;3.22.1" \
-            "build-tools;35.0.0" \
-            "platforms;android-35"
 
       # ── 5. Make Gradle wrapper executable ───────────────────────
       - name: Grant Gradle wrapper execute permission
@@ -54,12 +45,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # ── 7. Build the debug APK ───────────────────────────────────
+      # ── 6. Build the debug APK ───────────────────────────────────
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace --no-daemon
-        env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
-          CMAKE_ANDROID_NDK: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
 
       # ── 8. Find and display APK info ─────────────────────────────
       - name: List APK output
