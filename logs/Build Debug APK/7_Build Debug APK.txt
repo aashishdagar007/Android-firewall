@@ -1,0 +1,12 @@
+﻿2026-07-01T16:19:34.5426292Z ##[group]Run ./gradlew assembleDebug --stacktrace --no-daemon
+2026-07-01T16:19:34.5426825Z [36;1m./gradlew assembleDebug --stacktrace --no-daemon[0m
+2026-07-01T16:19:34.5458205Z shell: /usr/bin/bash -e {0}
+2026-07-01T16:19:34.5458473Z env:
+2026-07-01T16:19:34.5458814Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+2026-07-01T16:19:34.5459351Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.19-10/x64
+2026-07-01T16:19:34.5459779Z   ANDROID_HOME: /usr/local/lib/android/sdk
+2026-07-01T16:19:34.5460097Z   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+2026-07-01T16:19:34.5460701Z ##[endgroup]
+2026-07-01T16:19:34.6110630Z Error: Could not find or load main class "-Xmx64m"
+2026-07-01T16:19:34.6111567Z Caused by: java.lang.ClassNotFoundException: "-Xmx64m"
+2026-07-01T16:19:34.6167458Z ##[error]Process completed with exit code 1.

@@ -108,6 +108,10 @@ dependencies {
     // JSON
     implementation(libs.gson)
 
+    // AppCompat + Material XML theme (required for themes.xml parent resolution)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.google.material)
+
     // Debug tools
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)

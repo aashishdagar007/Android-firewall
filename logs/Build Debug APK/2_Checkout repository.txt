@@ -1,0 +1,73 @@
+﻿2026-07-01T16:19:09.5008307Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-07-01T16:19:09.5016673Z ##[group]Run actions/checkout@v4
+2026-07-01T16:19:09.5017352Z with:
+2026-07-01T16:19:09.5017861Z   repository: aashishdagar007/Android-firewall
+2026-07-01T16:19:09.5021173Z   token: ***
+2026-07-01T16:19:09.5021647Z   ssh-strict: true
+2026-07-01T16:19:09.5022002Z   ssh-user: git
+2026-07-01T16:19:09.5022383Z   persist-credentials: true
+2026-07-01T16:19:09.5022861Z   clean: true
+2026-07-01T16:19:09.5023229Z   sparse-checkout-cone-mode: true
+2026-07-01T16:19:09.5023663Z   fetch-depth: 1
+2026-07-01T16:19:09.5024030Z   fetch-tags: false
+2026-07-01T16:19:09.5024420Z   show-progress: true
+2026-07-01T16:19:09.5024820Z   lfs: false
+2026-07-01T16:19:09.5025157Z   submodules: false
+2026-07-01T16:19:09.5025654Z   set-safe-directory: true
+2026-07-01T16:19:09.5026674Z ##[endgroup]
+2026-07-01T16:19:09.6008698Z Syncing repository: aashishdagar007/Android-firewall
+2026-07-01T16:19:09.6010861Z ##[group]Getting Git version info
+2026-07-01T16:19:09.6012027Z Working directory is '/home/runner/work/Android-firewall/Android-firewall'
+2026-07-01T16:19:09.6013028Z [command]/usr/bin/git version
+2026-07-01T16:19:09.6093143Z git version 2.54.0
+2026-07-01T16:19:09.6146580Z ##[endgroup]
+2026-07-01T16:19:09.6160885Z Temporarily overriding HOME='/home/runner/work/_temp/4fb5e754-495d-4cea-8237-b91ed957cd86' before making global git config changes
+2026-07-01T16:19:09.6163031Z Adding repository directory to the temporary git global config as a safe directory
+2026-07-01T16:19:09.6166682Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Android-firewall/Android-firewall
+2026-07-01T16:19:09.6223773Z Deleting the contents of '/home/runner/work/Android-firewall/Android-firewall'
+2026-07-01T16:19:09.6227925Z ##[group]Initializing the repository
+2026-07-01T16:19:09.6233046Z [command]/usr/bin/git init /home/runner/work/Android-firewall/Android-firewall
+2026-07-01T16:19:09.6366477Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-07-01T16:19:09.6367944Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-07-01T16:19:09.6369227Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-07-01T16:19:09.6370366Z hint: call:
+2026-07-01T16:19:09.6370797Z hint:
+2026-07-01T16:19:09.6371398Z hint: 	git config --global init.defaultBranch <name>
+2026-07-01T16:19:09.6372266Z hint:
+2026-07-01T16:19:09.6373195Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-07-01T16:19:09.6374276Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-07-01T16:19:09.6374981Z hint:
+2026-07-01T16:19:09.6375389Z hint: 	git branch -m <name>
+2026-07-01T16:19:09.6375944Z hint:
+2026-07-01T16:19:09.6376557Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-07-01T16:19:09.6377531Z Initialized empty Git repository in /home/runner/work/Android-firewall/Android-firewall/.git/
+2026-07-01T16:19:09.6383967Z [command]/usr/bin/git remote add origin https://github.com/aashishdagar007/Android-firewall
+2026-07-01T16:19:09.6448482Z ##[endgroup]
+2026-07-01T16:19:09.6449380Z ##[group]Disabling automatic garbage collection
+2026-07-01T16:19:09.6452180Z [command]/usr/bin/git config --local gc.auto 0
+2026-07-01T16:19:09.6479518Z ##[endgroup]
+2026-07-01T16:19:09.6480619Z ##[group]Setting up auth
+2026-07-01T16:19:09.6486674Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-07-01T16:19:09.6518405Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-07-01T16:19:09.6859430Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-07-01T16:19:09.6889797Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-07-01T16:19:09.7103040Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-07-01T16:19:09.7132252Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-07-01T16:19:09.7347012Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-07-01T16:19:09.7381005Z ##[endgroup]
+2026-07-01T16:19:09.7381874Z ##[group]Fetching the repository
+2026-07-01T16:19:09.7391457Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +a32a5d9d336e2b56a9768bff2105b4226ff7d5ef:refs/remotes/origin/main
+2026-07-01T16:19:10.3941852Z From https://github.com/aashishdagar007/Android-firewall
+2026-07-01T16:19:10.3943253Z  * [new ref]         a32a5d9d336e2b56a9768bff2105b4226ff7d5ef -> origin/main
+2026-07-01T16:19:10.3977081Z ##[endgroup]
+2026-07-01T16:19:10.3980970Z ##[group]Determining the checkout info
+2026-07-01T16:19:10.3981988Z ##[endgroup]
+2026-07-01T16:19:10.3986690Z [command]/usr/bin/git sparse-checkout disable
+2026-07-01T16:19:10.4029328Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-07-01T16:19:10.4055377Z ##[group]Checking out the ref
+2026-07-01T16:19:10.4059337Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-07-01T16:19:10.4211123Z Switched to a new branch 'main'
+2026-07-01T16:19:10.4214104Z branch 'main' set up to track 'origin/main'.
+2026-07-01T16:19:10.4219638Z ##[endgroup]
+2026-07-01T16:19:10.4260098Z [command]/usr/bin/git log -1 --format=%H
+2026-07-01T16:19:10.4282900Z a32a5d9d336e2b56a9768bff2105b4226ff7d5ef

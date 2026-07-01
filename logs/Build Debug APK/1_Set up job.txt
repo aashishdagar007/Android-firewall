@@ -1,0 +1,35 @@
+﻿2026-07-01T16:19:07.0471275Z Current runner version: '2.335.1'
+2026-07-01T16:19:07.0496526Z ##[group]Runner Image Provisioner
+2026-07-01T16:19:07.0497602Z Hosted Compute Agent
+2026-07-01T16:19:07.0498253Z Version: 20260624.560
+2026-07-01T16:19:07.0498909Z Commit: 925d229a51159bc391ae97e54a2dd1fe20af789d
+2026-07-01T16:19:07.0499674Z Build Date: 2026-06-24T18:26:47Z
+2026-07-01T16:19:07.0500759Z Worker ID: {fcb7d8ef-6e9c-46db-b991-091a1e930185}
+2026-07-01T16:19:07.0501545Z Azure Region: westcentralus
+2026-07-01T16:19:07.0502138Z ##[endgroup]
+2026-07-01T16:19:07.0503690Z ##[group]Operating System
+2026-07-01T16:19:07.0504341Z Ubuntu
+2026-07-01T16:19:07.0504998Z 24.04.4
+2026-07-01T16:19:07.0505543Z LTS
+2026-07-01T16:19:07.0506043Z ##[endgroup]
+2026-07-01T16:19:07.0506653Z ##[group]Runner Image
+2026-07-01T16:19:07.0507273Z Image: ubuntu-24.04
+2026-07-01T16:19:07.0508275Z Version: 20260628.225.1
+2026-07-01T16:19:07.0509379Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260628.225/images/ubuntu/Ubuntu2404-Readme.md
+2026-07-01T16:19:07.0511386Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260628.225
+2026-07-01T16:19:07.0512481Z ##[endgroup]
+2026-07-01T16:19:07.0513676Z ##[group]GITHUB_TOKEN Permissions
+2026-07-01T16:19:07.0515795Z Contents: read
+2026-07-01T16:19:07.0516481Z Metadata: read
+2026-07-01T16:19:07.0517058Z Packages: read
+2026-07-01T16:19:07.0517713Z ##[endgroup]
+2026-07-01T16:19:07.0519843Z Secret source: Actions
+2026-07-01T16:19:07.0521120Z Prepare workflow directory
+2026-07-01T16:19:07.0894476Z Prepare all required actions
+2026-07-01T16:19:07.0935113Z Getting action download info
+2026-07-01T16:19:07.4839054Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-07-01T16:19:07.5590034Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+2026-07-01T16:19:08.4643869Z Download action repository 'android-actions/setup-android@v3' (SHA:9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407)
+2026-07-01T16:19:08.9638676Z Download action repository 'actions/cache@v4' (SHA:0057852bfaa89a56745cba8c7296529d2fc39830)
+2026-07-01T16:19:09.2277847Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-07-01T16:19:09.4292283Z Complete job name: Build Debug APK
