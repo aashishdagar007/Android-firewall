@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.asd.firewall.app-mergeDebugResources-65:/values-v18/values-v18.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\hp\\.gradle\\caches\\transforms-4\\18aeb06e999ecb375f32e3910776b7ec\\transformed\\appcompat-1.7.0\\res\\values-v18\\values-v18.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "48",
+                        "endOffsets": "99"
+                    }
+                }
+            ]
+        }
+    ]
+}

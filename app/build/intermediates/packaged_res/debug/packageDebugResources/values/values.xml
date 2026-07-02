@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="accent_blue">#3B82F6</color>
+    <color name="accent_cyan">#00E5FF</color>
+    <color name="accent_gold">#FFD700</color>
+    <color name="accent_green">#00E676</color>
+    <color name="accent_orange">#FF8C00</color>
+    <color name="accent_purple">#A855F7</color>
+    <color name="accent_red">#FF3355</color>
+    <color name="bg_dark">#030508</color>
+    <color name="bg_panel">#0C101A</color>
+    <color name="border_color">#1A3040</color>
+    <color name="ic_launcher_background">#0A0F23</color>
+    <color name="notification_color">#00E5FF</color>
+    <color name="text_bright">#FFFFFF</color>
+    <color name="text_main">#E2E8F0</color>
+    <color name="text_muted">#8B9BB4</color>
+    <string name="anomalies">Anomalies</string>
+    <string name="app_description">Advanced Network Firewall</string>
+    <string name="app_name">ASD Firewall</string>
+    <string name="connections">Connections</string>
+    <string name="dashboard">Dashboard</string>
+    <string name="ledger">Ledger</string>
+    <string name="notification_channel_desc">Aegis XII is actively monitoring your network traffic</string>
+    <string name="notification_channel_id">aegis_vpn_channel</string>
+    <string name="notification_channel_name">Firewall Protection</string>
+    <string name="notification_text">Network protection is running</string>
+    <string name="notification_title">Aegis XII Active</string>
+    <string name="packets">Packets</string>
+    <string name="processes">Processes</string>
+    <string name="rules">Rules</string>
+    <string name="start_protection">Start Protection</string>
+    <string name="stop_protection">Stop Protection</string>
+    <string name="threats">Threats</string>
+    <string name="vpn_permission_message">Aegis XII needs VPN access to monitor and filter network traffic. No data leaves your device.</string>
+    <string name="vpn_permission_title">VPN Permission Required</string>
+    <style name="Theme.AsdFirewall" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/bg_dark</item>
+        <item name="android:statusBarColor">@color/bg_dark</item>
+        <item name="android:navigationBarColor">@color/bg_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

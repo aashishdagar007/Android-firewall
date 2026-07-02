@@ -7,7 +7,6 @@ plugins {
 android {
     namespace   = "com.asd.firewall"
     compileSdk  = 35
-    ndkVersion  = "27.0.12077973"
 
     defaultConfig {
         applicationId   = "com.asd.firewall"
@@ -35,7 +34,6 @@ android {
         }
     }
 
-    // Link to our CMakeLists.txt for the native layer
     externalNativeBuild {
         cmake {
             path    = file("src/main/cpp/CMakeLists.txt")

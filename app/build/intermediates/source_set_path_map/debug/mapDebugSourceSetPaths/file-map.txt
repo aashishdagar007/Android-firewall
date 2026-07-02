@@ -1,0 +1,70 @@
+com.asd.firewall.app-navigation-common-2.8.3-0 C:\Users\hp\.gradle\caches\transforms-4\01165f855b01a34ef35ab45587f403f7\transformed\navigation-common-2.8.3\res
+com.asd.firewall.app-ui-release-1 C:\Users\hp\.gradle\caches\transforms-4\06f1387005a116f41d5be9f7b680cad7\transformed\ui-release\res
+com.asd.firewall.app-material-icons-extended-release-2 C:\Users\hp\.gradle\caches\transforms-4\073925dbd2c9adf917268813fcccb533\transformed\material-icons-extended-release\res
+com.asd.firewall.app-savedstate-ktx-1.2.1-3 C:\Users\hp\.gradle\caches\transforms-4\0b9275fd793a83ac155d584202acdf54\transformed\savedstate-ktx-1.2.1\res
+com.asd.firewall.app-ui-tooling-preview-release-4 C:\Users\hp\.gradle\caches\transforms-4\0cf55db77abae62295d81f62bec037ae\transformed\ui-tooling-preview-release\res
+com.asd.firewall.app-foundation-layout-release-5 C:\Users\hp\.gradle\caches\transforms-4\135ef018cd5b9d36a5b1844641a07ce0\transformed\foundation-layout-release\res
+com.asd.firewall.app-profileinstaller-1.3.1-6 C:\Users\hp\.gradle\caches\transforms-4\1404838288dee72060475daa3c930228\transformed\profileinstaller-1.3.1\res
+com.asd.firewall.app-savedstate-1.2.1-7 C:\Users\hp\.gradle\caches\transforms-4\144f2ea851287e41556d9876667e7ed8\transformed\savedstate-1.2.1\res
+com.asd.firewall.app-appcompat-1.7.0-8 C:\Users\hp\.gradle\caches\transforms-4\18aeb06e999ecb375f32e3910776b7ec\transformed\appcompat-1.7.0\res
+com.asd.firewall.app-ui-tooling-release-9 C:\Users\hp\.gradle\caches\transforms-4\18d4360804f6c34ea1a9788e14af50b5\transformed\ui-tooling-release\res
+com.asd.firewall.app-fragment-1.5.4-10 C:\Users\hp\.gradle\caches\transforms-4\22a389acd2f14792637d606696212e8c\transformed\fragment-1.5.4\res
+com.asd.firewall.app-customview-poolingcontainer-1.0.0-11 C:\Users\hp\.gradle\caches\transforms-4\28c913da25f9ba0684ff63c7abd0f290\transformed\customview-poolingcontainer-1.0.0\res
+com.asd.firewall.app-annotation-experimental-1.4.1-12 C:\Users\hp\.gradle\caches\transforms-4\2ab72d7937835a3263f45a84a1610107\transformed\annotation-experimental-1.4.1\res
+com.asd.firewall.app-activity-compose-1.9.3-13 C:\Users\hp\.gradle\caches\transforms-4\31799782c8f84c769c2deac1378b6487\transformed\activity-compose-1.9.3\res
+com.asd.firewall.app-core-ktx-1.13.1-14 C:\Users\hp\.gradle\caches\transforms-4\39032f4272bdffba32d338462eb0edaf\transformed\core-ktx-1.13.1\res
+com.asd.firewall.app-navigation-common-ktx-2.8.3-15 C:\Users\hp\.gradle\caches\transforms-4\43fc0c2c6636ba0aaa9394de38ad3afc\transformed\navigation-common-ktx-2.8.3\res
+com.asd.firewall.app-ui-tooling-data-release-16 C:\Users\hp\.gradle\caches\transforms-4\4654b96cf0e6c8b99e07f3d0541a3829\transformed\ui-tooling-data-release\res
+com.asd.firewall.app-lifecycle-runtime-compose-release-17 C:\Users\hp\.gradle\caches\transforms-4\4a702a67b45f20628bca91725e4e834f\transformed\lifecycle-runtime-compose-release\res
+com.asd.firewall.app-runtime-saveable-release-18 C:\Users\hp\.gradle\caches\transforms-4\4bc1b764840f64041af4cc1f2bf27155\transformed\runtime-saveable-release\res
+com.asd.firewall.app-recyclerview-1.1.0-19 C:\Users\hp\.gradle\caches\transforms-4\505a6fbf674c01520d7b0eab88f40c3b\transformed\recyclerview-1.1.0\res
+com.asd.firewall.app-lifecycle-viewmodel-savedstate-2.8.6-20 C:\Users\hp\.gradle\caches\transforms-4\51b514189b719f07ce4c4616f2c9ff29\transformed\lifecycle-viewmodel-savedstate-2.8.6\res
+com.asd.firewall.app-constraintlayout-2.0.1-21 C:\Users\hp\.gradle\caches\transforms-4\5ef11382078d153a826f73d6f7e1a7e7\transformed\constraintlayout-2.0.1\res
+com.asd.firewall.app-appcompat-resources-1.7.0-22 C:\Users\hp\.gradle\caches\transforms-4\6cd97948ada6df4dd1915f1aadfc6a3b\transformed\appcompat-resources-1.7.0\res
+com.asd.firewall.app-ui-graphics-release-23 C:\Users\hp\.gradle\caches\transforms-4\73c0758d2bd0f0080380554cd1dd9d76\transformed\ui-graphics-release\res
+com.asd.firewall.app-navigation-compose-2.8.3-24 C:\Users\hp\.gradle\caches\transforms-4\740fc0a4260078d0f55f8fe731b90eb0\transformed\navigation-compose-2.8.3\res
+com.asd.firewall.app-coordinatorlayout-1.1.0-25 C:\Users\hp\.gradle\caches\transforms-4\7d24727ba03f8db0507c6f11f8f0683c\transformed\coordinatorlayout-1.1.0\res
+com.asd.firewall.app-foundation-release-26 C:\Users\hp\.gradle\caches\transforms-4\8035879d82dc174a314028554984e809\transformed\foundation-release\res
+com.asd.firewall.app-emoji2-views-helper-1.3.0-27 C:\Users\hp\.gradle\caches\transforms-4\824e312c7300dc79e75e34aa03b0cc22\transformed\emoji2-views-helper-1.3.0\res
+com.asd.firewall.app-material-ripple-release-28 C:\Users\hp\.gradle\caches\transforms-4\864c2c823a4abb203251c3cd31d9af72\transformed\material-ripple-release\res
+com.asd.firewall.app-activity-1.9.3-29 C:\Users\hp\.gradle\caches\transforms-4\889376f22dcfee57560d91904a1d97b8\transformed\activity-1.9.3\res
+com.asd.firewall.app-activity-ktx-1.9.3-30 C:\Users\hp\.gradle\caches\transforms-4\8c3f2c0eed71bba5c38f30fd51caa4b3\transformed\activity-ktx-1.9.3\res
+com.asd.firewall.app-lifecycle-livedata-core-ktx-2.8.6-31 C:\Users\hp\.gradle\caches\transforms-4\8d529f4d278a39685b8c5950597ceb4f\transformed\lifecycle-livedata-core-ktx-2.8.6\res
+com.asd.firewall.app-lifecycle-viewmodel-compose-release-32 C:\Users\hp\.gradle\caches\transforms-4\8e4ca7bdf012b9d4fdc664cff0fb18c0\transformed\lifecycle-viewmodel-compose-release\res
+com.asd.firewall.app-material3-release-33 C:\Users\hp\.gradle\caches\transforms-4\9474e78d51870ff30bb7094f1a30a3d9\transformed\material3-release\res
+com.asd.firewall.app-lifecycle-livedata-2.8.6-34 C:\Users\hp\.gradle\caches\transforms-4\955e94ba3e214460e3cbd61080b07ab7\transformed\lifecycle-livedata-2.8.6\res
+com.asd.firewall.app-lifecycle-viewmodel-release-35 C:\Users\hp\.gradle\caches\transforms-4\959e211382aecb955089c0ec061209fe\transformed\lifecycle-viewmodel-release\res
+com.asd.firewall.app-ui-util-release-36 C:\Users\hp\.gradle\caches\transforms-4\963296db509431868e892177024826df\transformed\ui-util-release\res
+com.asd.firewall.app-material-icons-core-release-37 C:\Users\hp\.gradle\caches\transforms-4\96ea0681f91b2a7fc2ff5a2448bdbf50\transformed\material-icons-core-release\res
+com.asd.firewall.app-lifecycle-runtime-ktx-release-38 C:\Users\hp\.gradle\caches\transforms-4\9b2e5b92debb46730e7332704fab1cb1\transformed\lifecycle-runtime-ktx-release\res
+com.asd.firewall.app-startup-runtime-1.1.1-39 C:\Users\hp\.gradle\caches\transforms-4\9b3ffd1bef4b2948b3103e01b73d8e01\transformed\startup-runtime-1.1.1\res
+com.asd.firewall.app-cardview-1.0.0-40 C:\Users\hp\.gradle\caches\transforms-4\9c0eda785f7243b031b3f2ce0fbdea74\transformed\cardview-1.0.0\res
+com.asd.firewall.app-animation-release-41 C:\Users\hp\.gradle\caches\transforms-4\9c7155b6d1ec5354e580c7b2889ddc32\transformed\animation-release\res
+com.asd.firewall.app-transition-1.5.0-42 C:\Users\hp\.gradle\caches\transforms-4\9d9ac0e995888f1c26ca0ff6af9abe01\transformed\transition-1.5.0\res
+com.asd.firewall.app-material-release-43 C:\Users\hp\.gradle\caches\transforms-4\a41fe578b59d805935f39c2f9d50a546\transformed\material-release\res
+com.asd.firewall.app-core-runtime-2.2.0-44 C:\Users\hp\.gradle\caches\transforms-4\a9760aac06ce05aac385df92d19d5731\transformed\core-runtime-2.2.0\res
+com.asd.firewall.app-ui-unit-release-45 C:\Users\hp\.gradle\caches\transforms-4\ad2ac2b77e35ca8e73a9e1456756baaa\transformed\ui-unit-release\res
+com.asd.firewall.app-navigation-runtime-2.8.3-46 C:\Users\hp\.gradle\caches\transforms-4\ae5144dbb7d5e9857e63913e68f57d75\transformed\navigation-runtime-2.8.3\res
+com.asd.firewall.app-ui-geometry-release-47 C:\Users\hp\.gradle\caches\transforms-4\b2552859b08b4940fa4b16f539855bb1\transformed\ui-geometry-release\res
+com.asd.firewall.app-lifecycle-process-2.8.6-48 C:\Users\hp\.gradle\caches\transforms-4\c01d240876d4db89f45afacd7eb67454\transformed\lifecycle-process-2.8.6\res
+com.asd.firewall.app-animation-core-release-49 C:\Users\hp\.gradle\caches\transforms-4\cb4fa97451cef18789ddd396b2cbe7bf\transformed\animation-core-release\res
+com.asd.firewall.app-graphics-path-1.0.1-50 C:\Users\hp\.gradle\caches\transforms-4\cc6650c44e928d4187008c8c80b5b430\transformed\graphics-path-1.0.1\res
+com.asd.firewall.app-ui-text-release-51 C:\Users\hp\.gradle\caches\transforms-4\ced5075adfdb9e1e4c5b291a8cc4c523\transformed\ui-text-release\res
+com.asd.firewall.app-lifecycle-livedata-core-2.8.6-52 C:\Users\hp\.gradle\caches\transforms-4\dd0436834485988564846fb43cf8bd03\transformed\lifecycle-livedata-core-2.8.6\res
+com.asd.firewall.app-viewpager2-1.0.0-53 C:\Users\hp\.gradle\caches\transforms-4\e4a3510d3dfa205e79bf1c91a745c19a\transformed\viewpager2-1.0.0\res
+com.asd.firewall.app-core-1.13.1-54 C:\Users\hp\.gradle\caches\transforms-4\e636d0b2dd65fbb778f4d07b363ad4f2\transformed\core-1.13.1\res
+com.asd.firewall.app-ui-test-manifest-1.7.5-55 C:\Users\hp\.gradle\caches\transforms-4\e93572cb7ea4a7f7ce7986e4875fba9f\transformed\ui-test-manifest-1.7.5\res
+com.asd.firewall.app-emoji2-1.3.0-56 C:\Users\hp\.gradle\caches\transforms-4\f31c6dd3f7d9e77e66336408f1b8b731\transformed\emoji2-1.3.0\res
+com.asd.firewall.app-lifecycle-runtime-release-57 C:\Users\hp\.gradle\caches\transforms-4\f46edc4c2224a740651587afda6e1215\transformed\lifecycle-runtime-release\res
+com.asd.firewall.app-lifecycle-viewmodel-ktx-2.8.6-58 C:\Users\hp\.gradle\caches\transforms-4\f59b582faad7ebc102238b31684d90b7\transformed\lifecycle-viewmodel-ktx-2.8.6\res
+com.asd.firewall.app-material-1.12.0-59 C:\Users\hp\.gradle\caches\transforms-4\f5c0facfbf83a34ed749269c215fd848\transformed\material-1.12.0\res
+com.asd.firewall.app-navigation-runtime-ktx-2.8.3-60 C:\Users\hp\.gradle\caches\transforms-4\f8e2bcd4e50f7d767a9b4a978fb279d6\transformed\navigation-runtime-ktx-2.8.3\res
+com.asd.firewall.app-drawerlayout-1.1.1-61 C:\Users\hp\.gradle\caches\transforms-4\fafd867d274c3cb078b42cd0959aac83\transformed\drawerlayout-1.1.1\res
+com.asd.firewall.app-runtime-release-62 C:\Users\hp\.gradle\caches\transforms-4\fc9323a3468f68400dd03cf4183ca9ec\transformed\runtime-release\res
+com.asd.firewall.app-pngs-63 D:\AASHISH\Projects\Android firewall\app\build\generated\res\pngs\debug
+com.asd.firewall.app-resValues-64 D:\AASHISH\Projects\Android firewall\app\build\generated\res\resValues\debug
+com.asd.firewall.app-packageDebugResources-65 D:\AASHISH\Projects\Android firewall\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.asd.firewall.app-packageDebugResources-66 D:\AASHISH\Projects\Android firewall\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.asd.firewall.app-debug-67 D:\AASHISH\Projects\Android firewall\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.asd.firewall.app-debug-68 D:\AASHISH\Projects\Android firewall\app\src\debug\res
+com.asd.firewall.app-main-69 D:\AASHISH\Projects\Android firewall\app\src\main\res
