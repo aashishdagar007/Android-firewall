@@ -13,8 +13,8 @@ android {
         applicationId   = "com.asd.firewall"
         minSdk          = 26          // Android 8.0 Oreo — required for startForegroundService
         targetSdk       = 35          // Android 15
-        versionCode     = 1
-        versionName     = "1.0.0"
+        versionCode     = 2
+        versionName     = "2.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -94,12 +94,15 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
 
     // Compose (using BOM for version alignment)
+    // HorizontalPager / foundation-pager is included in androidx.ui (foundation)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
+    // Compose Foundation (explicit for HorizontalPager, pointerInput, Canvas, etc.)
+    implementation("androidx.compose.foundation:foundation")
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)

@@ -18,7 +18,10 @@ import java.io.File
 object FirewallEngine {
 
     private const val TAG = "FirewallEngine"
-    private var initialized = false
+    @Volatile private var initialized = false
+
+    /** Returns true if the native engine has been initialized and is ready. */
+    fun isInitialized(): Boolean = initialized
 
     // ── Load the JNI shared library ─────────────────────────────
     init {

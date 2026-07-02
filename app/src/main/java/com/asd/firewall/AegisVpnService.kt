@@ -154,6 +154,8 @@ class AegisVpnService : VpnService() {
 
             // Start the packet processing thread
             readThread = Thread({ packetLoop() }, "AegisPacketLoop").also { it.start() }
+            // Start live-stats notification updater (refreshes every 30 s)
+            startNotificationUpdater()
 
             Log.i(TAG, "VPN tunnel established — packet loop running")
             updateNotification(true)
@@ -292,7 +294,7 @@ class AegisVpnService : VpnService() {
         }
     }
 
-    // ── Foreground Notification (Spotify-style) ──────────────────
+    // ── Foreground Notification (Spotify-style with live stats) ──
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -309,7 +311,21 @@ class AegisVpnService : VpnService() {
         }
     }
 
-    private fun buildNotification(active: Boolean): Notification {
+    private var notifUpdateThread: Thread? = null
+
+    /** Start a background thread that refreshes the notification with live stats every 30 s */
+    private fun startNotificationUpdater() {
+        notifUpdateThread = Thread({
+            while (running.get()) {
+                try {
+                    Thread.sleep(30_000)
+                    if (running.get()) updateNotification(true)
+                } catch (e: InterruptedException) { break }
+            }
+        }, "AegisNotifUpdater").also { it.isDaemon = true; it.start() }
+    }
+
+    private fun buildNotification(active: Boolean): android.app.Notification {
         val openIntent = PendingIntent.getActivity(
             this, 0,
             Intent(this, MainActivity::class.java),
@@ -321,15 +337,42 @@ class AegisVpnService : VpnService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Collect live counters for the notification body
+        val stats = if (FirewallEngine.isInitialized()) {
+            try {
+                val json = FirewallEngine.getStats()
+                val blocked = Regex("\"blocked\":(\\d+)").find(json)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
+                val total   = Regex("\"total\":(\\d+)").find(json)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
+                val bytes   = Regex("\"bytes_total\":(\\d+)").find(json)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
+                Triple(total, blocked, bytes)
+            } catch (e: Exception) { Triple(0L, 0L, 0L) }
+        } else Triple(0L, 0L, 0L)
+
+        val (total, blocked, bytes) = stats
+        val bigText = buildString {
+            if (active) {
+                appendLine("🛡️ ${blocked} threats blocked  •  ${total} packets inspected")
+                append("📦 ${formatBytesNotif(bytes)} processed")
+            } else {
+                append("Protection stopped")
+            }
+        }
+
         return NotificationCompat.Builder(this, NOTIF_CHANNEL_ID)
-            .setContentTitle(getString(R.string.notification_title))
-            .setContentText(if (active) getString(R.string.notification_text) else "Protection stopped")
+            .setContentTitle(if (active) "⚡ AEGIS XII — Protecting your device" else "AEGIS XII — Protection inactive")
+            .setContentText(if (active) "${blocked} blocked  |  ${total} total packets" else "Tap to re-enable protection")
+            .setStyle(NotificationCompat.BigTextStyle().bigText(bigText))
             .setSmallIcon(R.drawable.ic_shield)
             .setColor(getColor(R.color.accent_cyan))
             .setContentIntent(openIntent)
-            .setOngoing(active)           // Persistent = cannot be dismissed (like Spotify)
+            .setOngoing(active)
             .setShowWhen(false)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .addAction(
+                R.drawable.ic_shield,
+                "📊 Open Dashboard",
+                openIntent
+            )
             .addAction(
                 R.drawable.ic_shield,
                 getString(R.string.stop_protection),
@@ -341,5 +384,12 @@ class AegisVpnService : VpnService() {
     private fun updateNotification(active: Boolean) {
         val nm = getSystemService(NotificationManager::class.java)
         nm.notify(NOTIF_ID, buildNotification(active))
+    }
+
+    private fun formatBytesNotif(bytes: Long): String = when {
+        bytes >= 1_073_741_824 -> "%.1f GB".format(bytes / 1_073_741_824.0)
+        bytes >= 1_048_576     -> "%.1f MB".format(bytes / 1_048_576.0)
+        bytes >= 1_024         -> "%.1f KB".format(bytes / 1_024.0)
+        else                   -> "$bytes B"
     }
 }

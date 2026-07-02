@@ -1,7 +1,12 @@
 package com.asd.firewall.ui.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import android.os.SystemClock
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.asd.firewall.AppPolicyManager
 import com.asd.firewall.FirewallEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -11,17 +16,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * FirewallViewModel — bridges the JNI engine to the Compose UI.
  *
  * Polls the JNI layer every second for live data (stats, packets, etc.)
  * and exposes it as StateFlows consumed by the Composable screens.
- *
- * This matches the polling pattern used by the desktop dashboard
- * (which polls the REST API every second via JavaScript).
  */
-class FirewallViewModel : ViewModel() {
+class FirewallViewModel(application: Application) : AndroidViewModel(application) {
 
     // ── Observable state flows ───────────────────────────────────
 
@@ -56,13 +59,47 @@ class FirewallViewModel : ViewModel() {
     private val _statsHistory = MutableStateFlow<List<Long>>(emptyList())
     val statsHistory: StateFlow<List<Long>> = _statsHistory.asStateFlow()
 
+    // ── New: Security Score (0–100) ──────────────────────────────
+    private val _securityScore = MutableStateFlow(100)
+    val securityScore: StateFlow<Int> = _securityScore.asStateFlow()
+
+    // ── New: VPN Uptime tracking ──────────────────────────────────
+    private val _vpnStartTime = MutableStateFlow(0L)
+    val vpnStartTime: StateFlow<Long> = _vpnStartTime.asStateFlow()
+
+    // ── New: Installed app list for per-app firewall ──────────────
+    data class InstalledApp(
+        val packageName: String,
+        val label: String,
+        val isSystemApp: Boolean,
+    )
+    private val _installedApps = MutableStateFlow<List<InstalledApp>>(emptyList())
+    val installedApps: StateFlow<List<InstalledApp>> = _installedApps.asStateFlow()
+
+    // Delegate policies directly from AppPolicyManager
+    val appPolicies: StateFlow<Map<String, String>> = AppPolicyManager.policies
+
+    // ── New: Total blocked / threats badge counts ─────────────────
+    val threatBadge: StateFlow<Int> get() = _threatBadgeCount
+    private val _threatBadgeCount = MutableStateFlow(0)
+
+    val anomalyBadge: StateFlow<Int> get() = _anomalyBadgeCount
+    private val _anomalyBadgeCount = MutableStateFlow(0)
+
+    // ── New: Last blocked IP for marquee ─────────────────────────
+    private val _lastBlockedEntry = MutableStateFlow<PacketEntry?>(null)
+    val lastBlockedEntry: StateFlow<PacketEntry?> = _lastBlockedEntry.asStateFlow()
+
     private var pollJob: Job? = null
     private var lastTotal: Long = 0
+    private val serviceStartMs = SystemClock.elapsedRealtime()
 
     // ── Lifecycle ────────────────────────────────────────────────
 
     init {
         startPolling()
+        loadInstalledApps()
+        _vpnStartTime.value = System.currentTimeMillis()
     }
 
     override fun onCleared() {
@@ -95,6 +132,11 @@ class FirewallViewModel : ViewModel() {
                     refreshRateLimit()
                 }
 
+                // Recompute security score every 5 seconds
+                if (tick % 5 == 0) {
+                    recomputeSecurityScore()
+                }
+
                 tick++
                 delay(1000)
             }
@@ -122,7 +164,11 @@ class FirewallViewModel : ViewModel() {
     }
 
     private suspend fun refreshPackets() {
-        _packets.value = JsonParsers.parsePackets(FirewallEngine.getPackets(100))
+        val pkts = JsonParsers.parsePackets(FirewallEngine.getPackets(100))
+        _packets.value = pkts
+        // Track most recent blocked packet for the marquee
+        val lastBlocked = pkts.firstOrNull { it.verdict == "BLOCK" }
+        if (lastBlocked != null) _lastBlockedEntry.value = lastBlocked
     }
 
     private suspend fun refreshRules() {
@@ -130,11 +176,15 @@ class FirewallViewModel : ViewModel() {
     }
 
     private suspend fun refreshThreats() {
-        _threats.value = JsonParsers.parseThreats(FirewallEngine.getThreats())
+        val t = JsonParsers.parseThreats(FirewallEngine.getThreats())
+        _threats.value = t
+        _threatBadgeCount.value = t.size
     }
 
     private suspend fun refreshAnomalies() {
-        _anomalies.value = JsonParsers.parseAnomalies(FirewallEngine.getAnomalies())
+        val a = JsonParsers.parseAnomalies(FirewallEngine.getAnomalies())
+        _anomalies.value = a
+        _anomalyBadgeCount.value = a.count { it.hitCount > 0 }
     }
 
     private suspend fun refreshConnections() {
@@ -151,6 +201,43 @@ class FirewallViewModel : ViewModel() {
 
     private fun refreshRateLimit() {
         _rateLimit.value = FirewallEngine.getRateLimit()
+    }
+
+    /**
+     * Security Score formula (0–100):
+     *   - Starts at 100
+     *   - -2 per active banned threat (max -40)
+     *   - -1 per anomaly triggered (max -20)
+     *   - -10 if block rate > 30% (something is very wrong)
+     *   - +5 if stealth mode is on
+     */
+    private fun recomputeSecurityScore() {
+        val threatPenalty  = (_threats.value.size * 2).coerceAtMost(40)
+        val anomalyPenalty = (_anomalies.value.count { it.hitCount > 0 }).coerceAtMost(20)
+        val highBlockPenalty = if (_stats.value.blockRate > 0.3f) 10 else 0
+        val stealthBonus = if (_stealthMode.value) 5 else 0
+        val score = (100 - threatPenalty - anomalyPenalty - highBlockPenalty + stealthBonus)
+            .coerceIn(0, 100)
+        _securityScore.value = score
+    }
+
+    // ── App list loading ─────────────────────────────────────────
+
+    fun loadInstalledApps() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val pm = getApplication<Application>().packageManager
+            val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                .filter { it.packageName != getApplication<Application>().packageName }
+                .map { info ->
+                    InstalledApp(
+                        packageName = info.packageName,
+                        label       = pm.getApplicationLabel(info).toString(),
+                        isSystemApp = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
+                    )
+                }
+                .sortedBy { it.label.lowercase() }
+            _installedApps.value = apps
+        }
     }
 
     // ── Actions (called from UI) ─────────────────────────────────
@@ -190,6 +277,7 @@ class FirewallViewModel : ViewModel() {
     fun setStealthMode(enabled: Boolean) {
         FirewallEngine.setStealthMode(enabled)
         _stealthMode.value = enabled
+        recomputeSecurityScore()
     }
 
     fun setRateLimit(pps: Int) {
@@ -200,6 +288,23 @@ class FirewallViewModel : ViewModel() {
     fun setDefaultPolicy(policy: String) {
         viewModelScope.launch(Dispatchers.IO) {
             FirewallEngine.setDefaultPolicy(policy)
+            AppPolicyManager.setDefaultPolicyGlobal(policy)
+        }
+    }
+
+    fun setAppPolicy(packageName: String, policy: String) {
+        AppPolicyManager.setPolicy(packageName, policy)
+    }
+
+    fun refreshAll() {
+        viewModelScope.launch(Dispatchers.IO) {
+            refreshStats()
+            refreshPackets()
+            refreshRules()
+            refreshThreats()
+            refreshConnections()
+            refreshAnomalies()
+            refreshLedger()
         }
     }
 }

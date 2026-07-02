@@ -8,9 +8,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -19,14 +20,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.*
 import com.asd.firewall.AegisVpnService
+import com.asd.firewall.AppPolicyManager
 import com.asd.firewall.BootReceiver
-import com.asd.firewall.R
 import com.asd.firewall.ui.screens.*
 import com.asd.firewall.ui.theme.*
 import com.asd.firewall.ui.viewmodel.FirewallViewModel
@@ -43,12 +47,28 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Init policy manager early
+        AppPolicyManager.init(this)
+
         setContent {
             AegisTheme {
-                AegisApp(
-                    onStartVpn  = ::requestVpnPermission,
-                    onStopVpn   = ::stopFirewallService,
-                )
+                val onboardingDone = remember { AppPolicyManager.isOnboardingDone() }
+                var showOnboarding by remember { mutableStateOf(!onboardingDone) }
+
+                if (showOnboarding) {
+                    WelcomeScreen(
+                        onFinished = {
+                            AppPolicyManager.setOnboardingDone()
+                            showOnboarding = false
+                            requestVpnPermission()
+                        }
+                    )
+                } else {
+                    AegisApp(
+                        onStartVpn = ::requestVpnPermission,
+                        onStopVpn  = ::stopFirewallService,
+                    )
+                }
             }
         }
     }
@@ -56,10 +76,8 @@ class MainActivity : ComponentActivity() {
     private fun requestVpnPermission() {
         val intent = VpnService.prepare(this)
         if (intent != null) {
-            // Show system VPN permission dialog
             vpnPermissionLauncher.launch(intent)
         } else {
-            // Permission already granted
             startFirewallService()
         }
     }
@@ -81,7 +99,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// ── Navigation destinations ──────────────────────────────────────
+// ── Navigation destinations ───────────────────────────────────────
+
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     object Dashboard   : Screen("dashboard",   "Dashboard",   Icons.Default.Dashboard)
     object Packets     : Screen("packets",     "Packets",     Icons.Default.List)
@@ -91,13 +110,21 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Anomalies   : Screen("anomalies",   "Anomalies",   Icons.Default.Warning)
     object Connections : Screen("connections", "Connections", Icons.Default.Cable)
     object Ledger      : Screen("ledger",      "Ledger",      Icons.Default.Lock)
+    // New screens
+    object AppFirewall : Screen("appfirewall", "App FW",      Icons.Default.AppShortcut)
+    object ThreatMap   : Screen("threatmap",   "Map",         Icons.Default.Map)
+    object Report      : Screen("report",      "Report",      Icons.Default.Assessment)
+    object Settings    : Screen("settings",    "Settings",    Icons.Default.Settings)
 }
 
-val BottomNavScreens = listOf(
+// Primary nav bar tabs (shown in bottom bar)
+val PrimaryNavScreens = listOf(
     Screen.Dashboard, Screen.Packets, Screen.Rules, Screen.Processes
 )
-val DrawerScreens = listOf(
-    Screen.Threats, Screen.Anomalies, Screen.Connections, Screen.Ledger
+// Secondary tabs (drawer / bottom bar extension)
+val SecondaryNavScreens = listOf(
+    Screen.Threats, Screen.Anomalies, Screen.Connections, Screen.Ledger,
+    Screen.AppFirewall, Screen.ThreatMap, Screen.Report, Screen.Settings
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -107,41 +134,43 @@ fun AegisApp(
     onStopVpn:  () -> Unit,
 ) {
     val vm: FirewallViewModel = viewModel()
-    val navController = rememberNavController()
-    val vpnRunning by AegisVpnService.isRunning.collectAsState()
-    val navBackStack by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStack?.destination?.route
+    val navController         = rememberNavController()
+    val vpnRunning            by AegisVpnService.isRunning.collectAsState()
+    val threatBadge           by vm.threatBadge.collectAsState()
+    val anomalyBadge          by vm.anomalyBadge.collectAsState()
+    val navBackStack          by navController.currentBackStackEntryAsState()
+    val currentRoute          = navBackStack?.destination?.route
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(BgDark)
     ) {
-        // Subtle background gradient glow
+        // Background radial glow
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(GlowCyan.copy(alpha = 0.07f), BgDark),
-                        radius = 800f
-                    )
+            modifier = Modifier.fillMaxSize().background(
+                Brush.radialGradient(
+                    colors = listOf(GlowCyan.copy(alpha = 0.06f), BgDark),
+                    radius = 900f
                 )
+            )
         )
 
         Scaffold(
-            containerColor = BgDark,
+            containerColor = Color.Transparent,
             topBar = {
                 AegisTopBar(
-                    currentRoute   = currentRoute,
-                    vpnRunning     = vpnRunning,
-                    onStartVpn     = onStartVpn,
-                    onStopVpn      = onStopVpn,
+                    currentRoute = currentRoute,
+                    vpnRunning   = vpnRunning,
+                    onStartVpn   = onStartVpn,
+                    onStopVpn    = onStopVpn,
                 )
             },
             bottomBar = {
                 AegisBottomNavBar(
                     currentRoute  = currentRoute,
+                    threatBadge   = threatBadge,
+                    anomalyBadge  = anomalyBadge,
                     onNavigate    = { navController.navigate(it) { launchSingleTop = true } },
                 )
             }
@@ -150,8 +179,8 @@ fun AegisApp(
                 navController    = navController,
                 startDestination = Screen.Dashboard.route,
                 modifier         = Modifier.padding(innerPadding),
-                enterTransition  = { fadeIn(animationSpec = tween(220)) },
-                exitTransition   = { fadeOut(animationSpec = tween(220)) },
+                enterTransition  = { fadeIn(animationSpec = tween(200)) + slideInHorizontally { it / 8 } },
+                exitTransition   = { fadeOut(animationSpec = tween(200)) },
             ) {
                 composable(Screen.Dashboard.route)   { DashboardScreen(vm, navController) }
                 composable(Screen.Packets.route)     { PacketsScreen(vm) }
@@ -161,10 +190,17 @@ fun AegisApp(
                 composable(Screen.Anomalies.route)   { AnomaliesScreen(vm) }
                 composable(Screen.Connections.route) { ConnectionsScreen(vm) }
                 composable(Screen.Ledger.route)      { LedgerScreen(vm) }
+                // New screens
+                composable(Screen.AppFirewall.route) { AppFirewallScreen(vm) }
+                composable(Screen.ThreatMap.route)   { ThreatMapScreen(vm) }
+                composable(Screen.Report.route)      { ReportScreen(vm) }
+                composable(Screen.Settings.route)    { SettingsScreen(vm) }
             }
         }
     }
 }
+
+// ── Top Bar ───────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -183,38 +219,35 @@ fun AegisTopBar(
         Screen.Anomalies.route   -> "Anomaly Detection"
         Screen.Connections.route -> "Live Connections"
         Screen.Ledger.route      -> "Chain Ledger"
+        Screen.AppFirewall.route -> "Per-App Firewall"
+        Screen.ThreatMap.route   -> "Live Threat Map"
+        Screen.Report.route      -> "Security Report"
+        Screen.Settings.route    -> "Settings"
         else                     -> "Aegis XII"
     }
 
     TopAppBar(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector        = Icons.Default.Shield,
-                    contentDescription = null,
-                    tint               = AccentCyan,
-                    modifier           = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text  = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = TextMain,
-                )
+                Icon(Icons.Default.Shield, null, tint = AccentCyan, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(title, style = MaterialTheme.typography.titleLarge, color = TextMain)
             }
         },
         actions = {
-            // VPN status badge
-            AnimatedContent(targetState = vpnRunning) { running ->
+            AnimatedContent(targetState = vpnRunning, label = "vpn") { running ->
                 if (running) {
                     TextButton(onClick = onStopVpn) {
-                        Icon(Icons.Default.Stop, contentDescription = "Stop", tint = AccentRed)
-                        Spacer(Modifier.width(4.dp))
+                        // Pulsing dot
+                        val inf = rememberInfiniteTransition(label = "dot")
+                        val a by inf.animateFloat(0.4f, 1f, infiniteRepeatable(tween(600), RepeatMode.Reverse), label = "a")
+                        Box(Modifier.size(8.dp).background(AccentGreen.copy(alpha = a), CircleShape))
+                        Spacer(Modifier.width(6.dp))
                         Text("Active", color = AccentGreen, style = MaterialTheme.typography.labelLarge)
                     }
                 } else {
                     TextButton(onClick = onStartVpn) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "Start", tint = AccentCyan)
+                        Icon(Icons.Default.PlayArrow, null, tint = AccentCyan)
                         Spacer(Modifier.width(4.dp))
                         Text("Start", color = AccentCyan, style = MaterialTheme.typography.labelLarge)
                     }
@@ -222,42 +255,79 @@ fun AegisTopBar(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = BgPanel,
+            containerColor    = BgPanel,
             titleContentColor = TextMain,
         )
     )
 }
 
+// ── Animated Bottom Navigation Bar ───────────────────────────────
+
 @Composable
 fun AegisBottomNavBar(
     currentRoute: String?,
+    threatBadge: Int,
+    anomalyBadge: Int,
     onNavigate: (String) -> Unit,
 ) {
+    val allScreens = listOf(
+        Screen.Dashboard, Screen.Rules, Screen.AppFirewall, Screen.Threats,
+        Screen.ThreatMap, Screen.Report, Screen.Connections, Screen.Settings
+    )
+
     NavigationBar(
         containerColor = BgPanel,
         contentColor   = TextMuted,
         tonalElevation = 0.dp,
     ) {
-        val allScreens = BottomNavScreens + DrawerScreens
         allScreens.forEach { screen ->
             val selected = currentRoute == screen.route
+
+            // Bounce animation on selection
+            val scale by animateFloatAsState(
+                targetValue   = if (selected) 1.15f else 1f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                label         = "scale"
+            )
+
+            val badge = when (screen) {
+                Screen.Threats  -> threatBadge
+                Screen.Anomalies -> anomalyBadge
+                else             -> 0
+            }
+
             NavigationBarItem(
                 selected = selected,
                 onClick  = { onNavigate(screen.route) },
                 icon = {
-                    Icon(
-                        imageVector        = screen.icon,
-                        contentDescription = screen.label,
-                        modifier           = Modifier.size(20.dp),
+                    BadgedBox(badge = {
+                        if (badge > 0) {
+                            Badge(containerColor = AccentRed) {
+                                Text(if (badge > 9) "9+" else badge.toString(),
+                                    style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }) {
+                        Icon(
+                            imageVector        = screen.icon,
+                            contentDescription = screen.label,
+                            modifier           = Modifier.size(20.dp).scale(scale),
+                        )
+                    }
+                },
+                label = {
+                    Text(
+                        screen.label,
+                        style    = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
                     )
                 },
-                label   = { Text(screen.label, style = MaterialTheme.typography.labelSmall) },
-                colors  = NavigationBarItemDefaults.colors(
+                colors = NavigationBarItemDefaults.colors(
                     selectedIconColor       = AccentCyan,
                     selectedTextColor       = AccentCyan,
                     unselectedIconColor     = TextMuted,
                     unselectedTextColor     = TextMuted,
-                    indicatorColor          = BgPanel,
+                    indicatorColor          = AccentCyan.copy(alpha = 0.12f),
                 )
             )
         }
