@@ -36,12 +36,9 @@ class ThreatSyncWorker(
             // Push these known malicious IPs into the engine as custom BLOCK rules
             if (FirewallEngine.isInitialized()) {
                 mockBadIps.forEach { ip ->
-                    FirewallEngine.addRule(
-                        action = "BLOCK",
-                        proto = "ANY",
-                        port = 0,
-                        desc = "Threat Intel Sync"
-                    )
+                    // Construct JSON rule matching the C++ ConfigParser expectations
+                    val ruleJson = """{"action":"BLOCK","proto":"ANY","dst_port":0,"description":"Threat Intel Sync - $ip"}"""
+                    FirewallEngine.addRule(ruleJson)
                     // Note: The C++ engine currently doesn't expose a dedicated "addIPBlock" method,
                     // so we use the generic rule interface. A true enhancement would be adding 
                     // a native API specifically for CIDR IP blocks.
