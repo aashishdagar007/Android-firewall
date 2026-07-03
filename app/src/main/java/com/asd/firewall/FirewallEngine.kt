@@ -20,6 +20,9 @@ object FirewallEngine {
     private const val TAG = "FirewallEngine"
     @Volatile private var initialized = false
 
+    // Path to rules.conf inside the app's private files dir (set during init)
+    @Volatile private var configFilePath: String = ""
+
     /** Returns true if the native engine has been initialized and is ready. */
     fun isInitialized(): Boolean = initialized
 
@@ -63,6 +66,7 @@ object FirewallEngine {
         }
 
         nativeCreate(logPath, configPath, ledgerDir)
+        configFilePath = configPath  // Store for saveRules()
         initialized = true
         Log.i(TAG, "FirewallEngine initialized")
     }
@@ -95,10 +99,53 @@ object FirewallEngine {
     fun getRules(): String = if (initialized) nativeGetRules() else "[]"
 
     /** Add a rule from a JSON body (same schema as the desktop REST API) */
-    fun addRule(jsonBody: String): Boolean = initialized && nativeAddRule(jsonBody)
+    fun addRule(jsonBody: String): Boolean {
+        val result = initialized && nativeAddRule(jsonBody)
+        if (result) saveRules()
+        return result
+    }
 
     /** Delete a rule by its ID */
-    fun deleteRule(ruleId: Int): Boolean = initialized && nativeDeleteRule(ruleId)
+    fun deleteRule(ruleId: Int): Boolean {
+        val result = initialized && nativeDeleteRule(ruleId)
+        if (result) saveRules()
+        return result
+    }
+
+    /**
+     * Persist the current rule chain to rules.conf so it survives service restarts.
+     * Called automatically after addRule() and deleteRule().
+     * Format: one JSON object per line (the C++ ConfigParser.load() reads this).
+     */
+    private fun saveRules() {
+        if (!initialized || configFilePath.isEmpty()) return
+        try {
+            val rulesJson = nativeGetRules() // JSON array
+            // Convert JSON array to newline-delimited format that ConfigParser can read
+            // Each rule is written as a simplified conf line:
+            //   ACTION PROTO DST_PORT DESC
+            // We write it as raw JSON per-line so future C++ can be extended to parse JSON
+            val file = File(configFilePath)
+            file.bufferedWriter().use { w ->
+                // Write header comment
+                w.write("# Aegis XII auto-saved rules — do not edit manually\n")
+                // Parse and re-serialize each rule as a conf line
+                val arr = com.google.gson.JsonParser.parseString(rulesJson).asJsonArray
+                for (el in arr) {
+                    val o = el.asJsonObject
+                    val action  = o.get("action")?.asString ?: continue
+                    val proto   = o.get("proto")?.asString ?: "ANY"
+                    val dstPort = o.get("dst_port")?.asInt ?: 0
+                    val desc    = o.get("description")?.asString ?: ""
+                    val portStr = if (dstPort == 0) "*" else dstPort.toString()
+                    w.write("$action $proto $portStr $desc\n")
+                }
+            }
+            Log.i(TAG, "Rules saved to $configFilePath")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to save rules: ${e.message}")
+        }
+    }
 
     /** Last N packets from the ring buffer as JSON array */
     fun getPackets(n: Int = 100): String = if (initialized) nativeGetPackets(n) else "[]"
@@ -111,6 +158,9 @@ object FirewallEngine {
 
     /** Threat ban table as JSON array */
     fun getThreats(): String = if (initialized) nativeGetThreats() else "[]"
+
+    /** Per-app bandwidth statistics as JSON array (pkg, bytes_in, bytes_out, packets_total, packets_blocked) */
+    fun getPerAppStats(): String = if (initialized) nativeGetPerAppStats() else "[]"
 
     /** Manually ban an IP */
     fun banIp(ip: String, reason: String = "Manual ban"): Boolean =
@@ -169,4 +219,5 @@ object FirewallEngine {
     @JvmStatic private external fun nativeSetRateLimit(pps: Int)
     @JvmStatic private external fun nativeSetUidPackageMap(jsonMap: String)
     @JvmStatic private external fun nativeResolveUid(uid: Int): String
+    @JvmStatic private external fun nativeGetPerAppStats(): String
 }

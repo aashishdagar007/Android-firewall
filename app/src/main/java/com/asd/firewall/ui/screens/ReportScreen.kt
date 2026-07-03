@@ -54,9 +54,19 @@ fun ReportScreen(vm: FirewallViewModel) {
         .sortedByDescending { it.value.size }
         .take(5)
 
-    val reportText = buildReportText(
-        uptimeHours, uptimeMins, stats, threats, anomalies, score, topBlockedIps, topApps, ledger.size
-    )
+    // Real report from ViewModel (uses live engine data + per-app stats)
+    val reportText = remember(stats, threats, anomalies, score) {
+        vm.generateSecurityReport()
+    }
+
+    val shareReport: () -> Unit = {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "Aegis XII Security Report")
+            putExtra(Intent.EXTRA_TEXT, reportText)
+        }
+        context.startActivity(Intent.createChooser(shareIntent, "Share Security Report via…"))
+    }
 
     Column(
         modifier = Modifier
@@ -96,6 +106,23 @@ fun ReportScreen(vm: FirewallViewModel) {
                     color = TextMuted,
                     style = MaterialTheme.typography.bodyMedium
                 )
+                Spacer(Modifier.height(16.dp))
+                // ── Real export / share button ─────────────────────
+                Button(
+                    onClick = shareReport,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AccentCyan
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Share Report",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Export Report", fontWeight = FontWeight.Bold)
+                }
             }
         }
 

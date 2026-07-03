@@ -8,6 +8,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.asd.firewall.AppPolicyManager
 import com.asd.firewall.FirewallEngine
+import com.asd.firewall.db.FirewallDatabase
+import com.asd.firewall.db.PacketLogEntity
+import com.asd.firewall.db.StatsSnapshotEntity
+import com.asd.firewall.db.PerAppLogEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -23,8 +27,15 @@ import kotlinx.coroutines.withContext
  *
  * Polls the JNI layer every second for live data (stats, packets, etc.)
  * and exposes it as StateFlows consumed by the Composable screens.
+ * Also persists blocked-packet logs and stats snapshots in Room.
  */
 class FirewallViewModel(application: Application) : AndroidViewModel(application) {
+
+    // ── Room database (lazy — opened on first access) ─────────────
+    private val db by lazy { FirewallDatabase.getInstance(application) }
+    private val packetLogDao by lazy { db.packetLogDao() }
+    private val statsSnapshotDao by lazy { db.statsSnapshotDao() }
+    private val perAppLogDao by lazy { db.perAppLogDao() }
 
     // ── Observable state flows ───────────────────────────────────
 
@@ -48,6 +59,9 @@ class FirewallViewModel(application: Application) : AndroidViewModel(application
 
     private val _ledger      = MutableStateFlow<List<LedgerEntry>>(emptyList())
     val ledger: StateFlow<List<LedgerEntry>> = _ledger.asStateFlow()
+
+    private val _perAppStats = MutableStateFlow<List<PerAppStatEntry>>(emptyList())
+    val perAppStats: StateFlow<List<PerAppStatEntry>> = _perAppStats.asStateFlow()
 
     private val _stealthMode = MutableStateFlow(false)
     val stealthMode: StateFlow<Boolean> = _stealthMode.asStateFlow()
@@ -117,11 +131,12 @@ class FirewallViewModel(application: Application) : AndroidViewModel(application
                 refreshStats()
                 if (tick % 1 == 0) refreshPackets()
 
-                // Every 3 seconds: update rules, threats, connections
+                // Every 3 seconds: update rules, threats, connections, per-app stats
                 if (tick % 3 == 0) {
                     refreshRules()
                     refreshThreats()
                     refreshConnections()
+                    refreshPerAppStats()
                 }
 
                 // Every 10 seconds: update anomalies and ledger (lower frequency)
@@ -130,6 +145,11 @@ class FirewallViewModel(application: Application) : AndroidViewModel(application
                     refreshLedger()
                     refreshStealthMode()
                     refreshRateLimit()
+                }
+
+                // Every 60 seconds: write a stats snapshot to the Room DB
+                if (tick % 60 == 0) {
+                    writeStatsSnapshot()
                 }
 
                 // Recompute security score every 5 seconds
@@ -195,6 +215,10 @@ class FirewallViewModel(application: Application) : AndroidViewModel(application
         _ledger.value = JsonParsers.parseLedger(FirewallEngine.getLedger(50))
     }
 
+    private suspend fun refreshPerAppStats() {
+        _perAppStats.value = JsonParsers.parsePerAppStats(FirewallEngine.getPerAppStats())
+    }
+
     private fun refreshStealthMode() {
         _stealthMode.value = FirewallEngine.getStealthMode()
     }
@@ -202,6 +226,67 @@ class FirewallViewModel(application: Application) : AndroidViewModel(application
     private fun refreshRateLimit() {
         _rateLimit.value = FirewallEngine.getRateLimit()
     }
+
+    /** Write a point-in-time stats snapshot to Room for historical sparkline */
+    private suspend fun writeStatsSnapshot() {
+        val s = _stats.value
+        val timestamp = System.currentTimeMillis()
+        val snapshot = StatsSnapshotEntity(
+            timestampMs    = timestamp,
+            totalPackets   = s.total,
+            blockedPackets = s.blocked,
+            allowedPackets = s.allowed,
+            bytesTotal     = s.bytesTotal,
+            tcpCount       = s.tcp,
+            udpCount       = s.udp,
+            icmpCount      = s.icmp,
+        )
+        try { statsSnapshotDao.insert(snapshot) } catch (_: Exception) {}
+
+        // Persist per-app stats
+        val perApp = _perAppStats.value
+        if (perApp.isNotEmpty()) {
+            val appEntities = perApp.map { p ->
+                PerAppLogEntity(
+                    timestampMs    = timestamp,
+                    packageName    = p.packageName,
+                    bytesIn        = p.bytesIn,
+                    bytesOut       = p.bytesOut,
+                    packetsBlocked = p.packetsBlocked
+                )
+            }
+            try { perAppLogDao.insertAll(appEntities) } catch (_: Exception) {}
+        }
+    }
+
+    /** Persist newly blocked packets to the Room DB */
+    private suspend fun persistBlockedPackets(packets: List<PacketEntry>) {
+        val blocked = packets.filter { it.verdict == "BLOCK" }
+        if (blocked.isEmpty()) return
+        val entities = blocked.map { p ->
+            PacketLogEntity(
+                timestampMs      = System.currentTimeMillis(),
+                srcIp            = p.srcIp,
+                dstIp            = p.dstIp,
+                srcPort          = p.srcPort,
+                dstPort          = p.dstPort,
+                proto            = p.proto,
+                verdict          = p.verdict,
+                processName      = p.process,
+                sizeBytes        = p.size,
+                ruleDescription  = "Auto-blocked",
+            )
+        }
+        try { packetLogDao.insertAll(entities) } catch (_: Exception) {}
+    }
+
+    /** Expose recent packet log history from Room (for ReportScreen) */
+    suspend fun getRecentBlockedFromDb(limit: Int = 200): List<PacketLogEntity> =
+        try { packetLogDao.getRecentBlocked(limit) } catch (_: Exception) { emptyList() }
+
+    /** Count of blocked packets stored in DB */
+    suspend fun getDbBlockedCount(): Long =
+        try { packetLogDao.count() } catch (_: Exception) { 0L }
 
     /**
      * Security Score formula (0–100):
@@ -305,6 +390,101 @@ class FirewallViewModel(application: Application) : AndroidViewModel(application
             refreshConnections()
             refreshAnomalies()
             refreshLedger()
+            refreshPerAppStats()
         }
+    }
+
+    /**
+     * Generate a structured Markdown security report aggregating live stats, threats,
+     * anomalies, and per-app data. Returns the report as a String for sharing.
+     */
+    fun generateSecurityReport(): String {
+        val s = _stats.value
+        val threats = _threats.value
+        val anomalies = _anomalies.value.filter { it.hitCount > 0 }
+        val perApp = _perAppStats.value.take(10)
+        val rules = _rules.value
+
+        val sb = StringBuilder()
+        val timestamp = java.text.SimpleDateFormat(
+            "yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()
+        ).format(java.util.Date())
+
+        sb.appendLine("# 🛡️ Aegis XII — Security Report")
+        sb.appendLine("Generated: $timestamp")
+        sb.appendLine()
+        sb.appendLine("## 📊 Traffic Summary")
+        sb.appendLine("| Metric | Value |")
+        sb.appendLine("|--------|-------|")
+        sb.appendLine("| Total Packets | ${s.total} |")
+        sb.appendLine("| Allowed | ${s.allowed} (${String.format("%.1f", s.allowRate * 100)}%) |")
+        sb.appendLine("| Blocked | ${s.blocked} (${String.format("%.1f", s.blockRate * 100)}%) |")
+        sb.appendLine("| TCP | ${s.tcp} |")
+        sb.appendLine("| UDP | ${s.udp} |")
+        sb.appendLine("| ICMP | ${s.icmp} |")
+        sb.appendLine("| Data Processed | ${formatBytes(s.bytesTotal)} |")
+        sb.appendLine("| Security Score | ${_securityScore.value}/100 |")
+        sb.appendLine()
+
+        sb.appendLine("## 🚨 Active Threats (${threats.size} banned IPs)")
+        if (threats.isEmpty()) {
+            sb.appendLine("No active threats.")
+        } else {
+            sb.appendLine("| IP | Reason | Ban Count |")
+            sb.appendLine("|----|--------|-----------|")
+            threats.take(20).forEach { t ->
+                sb.appendLine("| ${t.ip} | ${t.reason} | ${t.banCount} |")
+            }
+            if (threats.size > 20) sb.appendLine("*... and ${threats.size - 20} more*")
+        }
+        sb.appendLine()
+
+        sb.appendLine("## ⚠️ Anomaly Detections (${anomalies.size} triggered)")
+        if (anomalies.isEmpty()) {
+            sb.appendLine("No anomalies detected.")
+        } else {
+            sb.appendLine("| Anomaly | Hit Count |")
+            sb.appendLine("|---------|-----------|")
+            anomalies.forEach { a ->
+                sb.appendLine("| ${a.name} | ${a.hitCount} |")
+            }
+        }
+        sb.appendLine()
+
+        sb.appendLine("## 📱 Top Apps by Traffic")
+        if (perApp.isEmpty()) {
+            sb.appendLine("No per-app data available yet.")
+        } else {
+            sb.appendLine("| App | Data In | Data Out | Blocked Pkts |")
+            sb.appendLine("|-----|---------|----------|-------------|")
+            perApp.forEach { p ->
+                sb.appendLine("| ${p.packageName.substringAfterLast('.')} | ${formatBytes(p.bytesIn)} | ${formatBytes(p.bytesOut)} | ${p.packetsBlocked} |")
+            }
+        }
+        sb.appendLine()
+
+        sb.appendLine("## 📋 Active Rules (${rules.size})")
+        if (rules.isEmpty()) {
+            sb.appendLine("No custom rules configured.")
+        } else {
+            sb.appendLine("| # | Action | Proto | Port | Description |")
+            sb.appendLine("|---|--------|-------|------|-------------|")
+            rules.take(15).forEach { r ->
+                val port = if (r.dstPort == 0) "*" else r.dstPort.toString()
+                sb.appendLine("| ${r.id} | ${r.action} | ${r.proto} | $port | ${r.description} |")
+            }
+        }
+        sb.appendLine()
+        sb.appendLine("---")
+        sb.appendLine("*Report generated by Aegis XII Android Firewall v2.0.0*")
+
+        return sb.toString()
+    }
+
+    private fun formatBytes(bytes: Long): String = when {
+        bytes >= 1_073_741_824 -> "%.1f GB".format(bytes / 1_073_741_824.0)
+        bytes >= 1_048_576     -> "%.1f MB".format(bytes / 1_048_576.0)
+        bytes >= 1_024         -> "%.1f KB".format(bytes / 1_024.0)
+        else                   -> "$bytes B"
     }
 }

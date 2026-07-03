@@ -71,6 +71,15 @@
             </intent-filter>
         </receiver>
 
+        <!-- ── Notification Action Receiver ── -->
+        <receiver
+            android:name=".receivers.NotificationActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.asd.firewall.UNBAN_IP" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

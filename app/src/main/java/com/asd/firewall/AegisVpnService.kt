@@ -6,19 +6,32 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.asd.firewall.ui.MainActivity
+import com.asd.firewall.workers.DbCleanupWorker
+import com.asd.firewall.workers.ThreatSyncWorker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramSocket
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.nio.ByteBuffer
@@ -63,7 +76,8 @@ class AegisVpnService : VpnService() {
 
     private var tunInterface: ParcelFileDescriptor? = null
     private val running = AtomicBoolean(false)
-    private var readThread: Thread? = null
+    // Coroutine scope for the packet loop — cancelled on VPN stop
+    private var vpnScope: CoroutineScope? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
     // ── Lifecycle ────────────────────────────────────────────────
@@ -73,7 +87,31 @@ class AegisVpnService : VpnService() {
         Log.i(TAG, "Service created")
         FirewallEngine.init(this)
         createNotificationChannel()
+        ThreatNotificationManager.init(this)   // Initialize threat alert channel
         buildAndPushUidMap()
+        scheduleBackgroundWorkers()
+    }
+
+    private fun scheduleBackgroundWorkers() {
+        val workManager = WorkManager.getInstance(this)
+
+        // Schedule daily threat intelligence sync
+        val syncRequest = PeriodicWorkRequestBuilder<ThreatSyncWorker>(24, java.util.concurrent.TimeUnit.HOURS)
+            .build()
+        workManager.enqueueUniquePeriodicWork(
+            "ThreatSyncWork",
+            ExistingPeriodicWorkPolicy.KEEP,
+            syncRequest
+        )
+
+        // Schedule daily database cleanup
+        val cleanupRequest = PeriodicWorkRequestBuilder<DbCleanupWorker>(24, java.util.concurrent.TimeUnit.HOURS)
+            .build()
+        workManager.enqueueUniquePeriodicWork(
+            "DbCleanupWork",
+            ExistingPeriodicWorkPolicy.KEEP,
+            cleanupRequest
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -152,8 +190,10 @@ class AegisVpnService : VpnService() {
             running.set(true)
             _isRunning.value = true
 
-            // Start the packet processing thread
-            readThread = Thread({ packetLoop() }, "AegisPacketLoop").also { it.start() }
+            // Start the packet processing coroutine (replaces raw thread)
+            val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+            vpnScope = scope
+            scope.launch { packetLoop() }
             // Start live-stats notification updater (refreshes every 30 s)
             startNotificationUpdater()
 
@@ -179,9 +219,9 @@ class AegisVpnService : VpnService() {
         }
         tunInterface = null
 
-        readThread?.interrupt()
-        readThread?.join(2000)
-        readThread = null
+        // Cancel the coroutine scope (cooperative cancellation)
+        vpnScope?.cancel()
+        vpnScope = null
 
         updateNotification(false)
         Log.i(TAG, "VPN stopped")
@@ -190,63 +230,59 @@ class AegisVpnService : VpnService() {
     // ── Packet Processing Loop ───────────────────────────────────
 
     /**
-     * The main packet loop. Runs on a dedicated background thread.
+     * The main packet loop. Runs as a coroutine on Dispatchers.IO.
+     *
+     * Cooperative cancellation: the loop checks isActive (from CoroutineScope)
+     * and also the running AtomicBoolean. TUN close wakes the blocked read.
      *
      * For each raw IP packet read from the TUN fd:
-     * 1. Extract UID of the sending app (Android O+ supports per-packet UID)
-     * 2. Resolve UID → package name
-     * 3. Call FirewallEngine.evaluatePacket() (C++ rule engine)
-     * 4. ALLOW → forward via a protected socket back to the real network
-     * 5. BLOCK  → silently discard (do not write back to TUN or forward)
+     * 1. Extract UID of the sending app via ConnectivityManager (API 29+)
+     * 2. Call FirewallEngine.evaluatePacket() (C++ rule engine)
+     * 3. ALLOW → forward via a protected socket back to the real network
+     * 4. BLOCK  → silently discard
      */
-    private fun packetLoop() {
-        Log.i(TAG, "Packet loop started on thread: ${Thread.currentThread().name}")
+    private suspend fun packetLoop() {
+        Log.i(TAG, "Packet loop started (coroutine on ${Thread.currentThread().name})")
 
         val tun = tunInterface ?: return
         val inputStream  = FileInputStream(tun.fileDescriptor)
         val outputStream = FileOutputStream(tun.fileDescriptor)
 
-        val buffer = ByteBuffer.allocate(BUFFER_SIZE)
         val rawBytes = ByteArray(BUFFER_SIZE)
 
-        while (running.get()) {
+        // isActive = cooperative coroutine cancellation (scope.cancel() sets this false)
+        while (isActive && running.get()) {
             try {
-                buffer.clear()
                 val length = inputStream.read(rawBytes)
-                if (length <= 0) continue
+                if (length <= 0) {
+                    // Yield CPU slice to allow other coroutines to run and check cancellation
+                    kotlinx.coroutines.yield()
+                    continue
+                }
 
                 // Quick version check — skip non-IPv4/IPv6
                 val version = (rawBytes[0].toInt() and 0xFF) shr 4
                 if (version != 4 && version != 6) continue
 
-                // Determine which app sent this packet (UID-based attribution)
-                // Note: Full UID attribution requires android.net.TrafficStats or
-                // VpnService packet UID reading (API 29+). We use a simplified
-                // approach here and rely on the Kotlin-side UID map.
+                // Determine which app sent this packet via ConnectivityManager (API 29+)
                 val appName = resolvePacketApp(rawBytes, length)
 
-                // Evaluate via C++ rule engine
+                // Evaluate via C++ rule engine (heuristics, DPI, rule chain)
                 val allowed = FirewallEngine.evaluatePacket(rawBytes, length, appName)
 
                 if (allowed) {
-                    // Forward the packet to the real network via a protected socket
-                    // For simplicity with the TUN approach: we re-inject into TUN
-                    // In a production implementation, use a raw socket + protect()
-                    // The TUN automatically handles routing after re-injection.
-                    //
-                    // For the initial implementation, we use the standard approach:
-                    // allowed packets are written back to TUN (they then go through
-                    // the real network stack since the TUN is connected to a real socket)
+                    // ALLOW: write back to TUN so the OS forwards to real network
                     outputStream.write(rawBytes, 0, length)
                 }
-                // BLOCKED packets are silently dropped — we simply don't write them back
+                // BLOCK: silently discard — packet never reaches the network
 
-            } catch (e: InterruptedException) {
-                Log.d(TAG, "Packet loop interrupted — stopping")
-                break
+            } catch (e: java.io.IOException) {
+                // TUN closed = VPN stopping, exit cleanly
+                if (!running.get()) break
+                Log.w(TAG, "Packet loop I/O error: ${e.message}")
             } catch (e: Exception) {
                 if (!running.get()) break
-                Log.w(TAG, "Error in packet loop: ${e.message}")
+                Log.w(TAG, "Packet loop error: ${e.message}")
             }
         }
 
@@ -254,18 +290,66 @@ class AegisVpnService : VpnService() {
     }
 
     /**
-     * Resolve which app a packet belongs to using /proc/net/tcp or /proc/net/udp.
-     * This is a best-effort resolution — uses the UID map built in buildAndPushUidMap().
+     * Resolve which app a packet belongs to.
+     *
+     * On API 29+: Uses ConnectivityManager.getConnectionOwnerUid() for exact UID attribution
+     * based on the socket 5-tuple (src_ip, src_port, dst_ip, dst_port, proto).
+     *
+     * On API < 29: Falls back to reading /proc/net/tcp (dst_port heuristic).
      */
     private fun resolvePacketApp(rawBytes: ByteArray, length: Int): String {
         if (length < 20) return "unknown"
-        // Read dst_port from IP packet (bytes 22-23 for TCP/UDP, after 20-byte IP header)
+
+        val version = (rawBytes[0].toInt() and 0xFF) shr 4
+        if (version != 4) return "unknown" // IPv6 handled separately
+
         val proto = rawBytes[9].toInt() and 0xFF
         if ((proto != 6 && proto != 17) || length < 24) return "proto:$proto"
 
+        // Extract 5-tuple from IPv4 header
+        val srcIp = ((rawBytes[12].toInt() and 0xFF) shl 24) or
+                    ((rawBytes[13].toInt() and 0xFF) shl 16) or
+                    ((rawBytes[14].toInt() and 0xFF) shl  8) or
+                    (rawBytes[15].toInt() and 0xFF)
+        val dstIp = ((rawBytes[16].toInt() and 0xFF) shl 24) or
+                    ((rawBytes[17].toInt() and 0xFF) shl 16) or
+                    ((rawBytes[18].toInt() and 0xFF) shl  8) or
+                    (rawBytes[19].toInt() and 0xFF)
+        val srcPort = ((rawBytes[20].toInt() and 0xFF) shl 8) or (rawBytes[21].toInt() and 0xFF)
         val dstPort = ((rawBytes[22].toInt() and 0xFF) shl 8) or (rawBytes[23].toInt() and 0xFF)
-        val uid = FirewallEngine.resolveUid(dstPort) // simplified: UID from C++ proc resolver
-        return uid
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // API 29+: exact UID from socket table
+            try {
+                val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+                val transportProto = if (proto == 6) 6 else 17 // IPPROTO_TCP / IPPROTO_UDP
+                val srcAddr = InetAddress.getByAddress(
+                    byteArrayOf(
+                        (srcIp shr 24).toByte(), (srcIp shr 16).toByte(),
+                        (srcIp shr 8).toByte(), srcIp.toByte()
+                    )
+                )
+                val dstAddr = InetAddress.getByAddress(
+                    byteArrayOf(
+                        (dstIp shr 24).toByte(), (dstIp shr 16).toByte(),
+                        (dstIp shr 8).toByte(), dstIp.toByte()
+                    )
+                )
+                val uid = cm.getConnectionOwnerUid(
+                    transportProto,
+                    InetSocketAddress(srcAddr, srcPort),
+                    InetSocketAddress(dstAddr, dstPort)
+                )
+                if (uid != android.os.Process.INVALID_UID) {
+                    return FirewallEngine.resolveUid(uid)
+                }
+            } catch (e: Exception) {
+                Log.v(TAG, "UID lookup failed: ${e.message}")
+            }
+        }
+
+        // Fallback: use port-based map (best-effort for API < 29)
+        return FirewallEngine.resolveUid(dstPort)
     }
 
     // ── UID→Package Map ──────────────────────────────────────────
@@ -313,13 +397,49 @@ class AegisVpnService : VpnService() {
 
     private var notifUpdateThread: Thread? = null
 
-    /** Start a background thread that refreshes the notification with live stats every 30 s */
+    /**
+     * Start a background thread that:
+     * 1. Refreshes the foreground notification with live stats every 30 s
+     * 2. Detects new threat bans and posts real-time alert notifications
+     */
     private fun startNotificationUpdater() {
+        var lastKnownThreatCount = 0
         notifUpdateThread = Thread({
             while (running.get()) {
                 try {
                     Thread.sleep(30_000)
-                    if (running.get()) updateNotification(true)
+                    if (!running.get()) break
+
+                    // Refresh the persistent foreground notification
+                    updateNotification(true)
+
+                    // Check for new threat bans
+                    if (FirewallEngine.isInitialized()) {
+                        val threatsJson = FirewallEngine.getThreats()
+                        // Count current bans by counting "ip":" occurrences
+                        val currentCount = threatsJson.split("\"ip\":\"").size - 1
+                        val newBans = currentCount - lastKnownThreatCount
+
+                        if (newBans > 0 && lastKnownThreatCount > 0) {
+                            // Extract the most recently banned IP
+                            val ipMatch = Regex("\"ip\":\"([^\"]+)\"").find(threatsJson)
+                            val latestIp = ipMatch?.groupValues?.get(1) ?: "Unknown IP"
+                            val reasonMatch = Regex("\"reason\":\"([^\"]+)\"").find(threatsJson)
+                            val reason = reasonMatch?.groupValues?.get(1) ?: "Auto-ban"
+
+                            if (newBans == 1) {
+                                ThreatNotificationManager.notifyThreatBanned(
+                                    this@AegisVpnService, latestIp, reason
+                                )
+                            } else {
+                                ThreatNotificationManager.notifyBatchThreats(
+                                    this@AegisVpnService, newBans, latestIp
+                                )
+                            }
+                        }
+                        lastKnownThreatCount = currentCount
+                    }
+
                 } catch (e: InterruptedException) { break }
             }
         }, "AegisNotifUpdater").also { it.isDaemon = true; it.start() }

@@ -1,15 +1,17 @@
 [versions]
-agp                = "8.5.2"
-kotlin             = "2.0.21"
-coreKtx            = "1.13.1"
-lifecycleRuntime   = "2.8.6"
-activityCompose    = "1.9.3"
-composeBom         = "2024.10.01"
-navigationCompose  = "2.8.3"
-coroutines         = "1.9.0"
+agp                = "8.9.2"
+kotlin             = "2.1.21"
+coreKtx            = "1.16.0"
+lifecycleRuntime   = "2.9.1"
+activityCompose    = "1.10.1"
+composeBom         = "2025.05.01"
+navigationCompose  = "2.9.0"
+coroutines         = "1.10.2"
 gson               = "2.11.0"
 appcompat          = "1.7.0"
 googleMaterial     = "1.12.0"
+room               = "2.7.1"
+workManager        = "2.10.1"
 
 [libraries]
 # AndroidX Core
@@ -41,6 +43,14 @@ gson                             = { group = "com.google.code.gson",   name = "g
 androidx-appcompat               = { group = "androidx.appcompat",    name = "appcompat",                   version.ref = "appcompat"         }
 google-material                  = { group = "com.google.android.material", name = "material",              version.ref = "googleMaterial"    }
 
+# Room (persistent packet log + stats history)
+androidx-room-runtime            = { group = "androidx.room",          name = "room-runtime",                version.ref = "room"              }
+androidx-room-ktx                = { group = "androidx.room",          name = "room-ktx",                   version.ref = "room"              }
+androidx-room-compiler           = { group = "androidx.room",          name = "room-compiler",               version.ref = "room"              }
+
+# WorkManager (periodic rule sync / report generation)
+androidx-work-runtime-ktx        = { group = "androidx.work",          name = "work-runtime-ktx",            version.ref = "workManager"       }
+
 # Test
 junit                            = { group = "junit",                   name = "junit",                       version = "4.13.2"                }
 androidx-junit                   = { group = "androidx.test.ext",      name = "junit",                       version = "1.2.1"                 }
@@ -50,3 +60,4 @@ androidx-espresso-core           = { group = "androidx.test.espresso", name = "e
 android-application             = { id = "com.android.application",   version.ref = "agp"    }
 kotlin-android                  = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose                  = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-kapt                     = { id = "org.jetbrains.kotlin.kapt",  version.ref = "kotlin" }

@@ -52,6 +52,18 @@ data class ProcessEntry(
     val bytesOut: Long = 0,
 )
 
+/** Live per-app bandwidth stats from the C++ JNI engine */
+data class PerAppStatEntry(
+    val packageName: String,
+    val bytesIn: Long,
+    val bytesOut: Long,
+    val packetsTotal: Long,
+    val packetsBlocked: Long,
+) {
+    val bytesTotal: Long get() = bytesIn + bytesOut
+    val blockRate: Float get() = if (packetsTotal > 0) packetsBlocked.toFloat() / packetsTotal else 0f
+}
+
 data class ThreatEntry(
     val ip: String,
     val reason: String,
@@ -194,3 +206,18 @@ object JsonParsers {
         }
     } catch (e: Exception) { emptyList() }
 }
+
+fun parsePerAppStats(json: String): List<PerAppStatEntry> = try {
+    val arr = JsonParser.parseString(json).asJsonArray
+    arr.map { el ->
+        val o = el.asJsonObject
+        PerAppStatEntry(
+            packageName     = o.get("pkg")?.asString ?: "",
+            bytesIn         = o.get("bytes_in")?.asLong ?: 0,
+            bytesOut        = o.get("bytes_out")?.asLong ?: 0,
+            packetsTotal    = o.get("packets_total")?.asLong ?: 0,
+            packetsBlocked  = o.get("packets_blocked")?.asLong ?: 0,
+        )
+    }.filter { it.packageName.isNotEmpty() }
+        .sortedByDescending { it.bytesTotal }
+} catch (e: Exception) { emptyList() }

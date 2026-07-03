@@ -38,6 +38,18 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 
+// ── Per-app bandwidth tracking ──────────────────────────────────
+struct PerAppStats {
+    uint64_t bytes_in       = 0;  // bytes received by the app
+    uint64_t bytes_out      = 0;  // bytes sent by the app
+    uint64_t packets_total  = 0;  // total packets seen
+    uint64_t packets_blocked = 0; // packets dropped for this app
+};
+
+// ── UID → package name map (set from Kotlin via nativeSetUidPackageMap) ──
+static std::unordered_map<int, std::string> g_uid_to_pkg;
+static std::mutex g_uid_map_mtx;
+
 // ── Global engine state ─────────────────────────────────────────
 // A single instance shared across all JNI calls.
 struct AegisEngine {
@@ -49,6 +61,10 @@ struct AegisEngine {
     std::string                       ledger_json_path; // stored for getLedger()
     bool                              ledger_open{false}; // result of ledger.open()
     uint64_t                          seq_counter{0};
+
+    // Per-app bandwidth: package_name -> stats
+    std::unordered_map<std::string, PerAppStats> per_app_stats;
+    std::mutex per_app_mtx;
 
     AegisEngine(const std::string& log_path, const std::string& ledger_chain, const std::string& ledger_json)
         : ledger(ledger_chain, ledger_json), ledger_json_path(ledger_json)
@@ -206,7 +222,6 @@ Java_com_asd_firewall_FirewallEngine_nativeEvaluatePacket(
         g_engine->stats.allowed++;
     } else {
         g_engine->stats.blocked++;
-        // Log blocked packet to the tamper-proof ledger
         if (g_engine->ledger_open) {
             // ledger entry for blocked packet
         }
@@ -217,6 +232,23 @@ Java_com_asd_firewall_FirewallEngine_nativeEvaluatePacket(
         case fw::Proto::UDP:  g_engine->stats.udp++;  break;
         case fw::Proto::ICMP: g_engine->stats.icmp++; break;
         default: break;
+    }
+
+    // ── Per-app bandwidth accumulation ──────────────────────────
+    if (!app.empty() && app != "unknown") {
+        std::lock_guard<std::mutex> lk(g_engine->per_app_mtx);
+        auto& pas = g_engine->per_app_stats[app];
+        pas.packets_total++;
+        // Heuristic: src_ip == 10.0.0.2 means this app sent the packet (outbound)
+        // dst_ip == 10.0.0.2 means the packet is inbound to this app
+        if (pkt.dst_ip == 0x0A000002u) { // 10.0.0.2
+            pas.bytes_in += static_cast<uint64_t>(pkt.size);
+        } else {
+            pas.bytes_out += static_cast<uint64_t>(pkt.size);
+        }
+        if (result.verdict != fw::Action::ALLOW) {
+            pas.packets_blocked++;
+        }
     }
 
     // Store in ring buffer
@@ -567,6 +599,81 @@ Java_com_asd_firewall_FirewallEngine_nativeSetRateLimit(
 {
     if (!g_engine) return;
     g_engine->engine.set_rate_limit(static_cast<uint32_t>(pps));
+}
+
+/**
+ * Get per-app bandwidth statistics as a JSON array.
+ * Each element: {"pkg":"com.example","bytes_in":N,"bytes_out":N,"packets_total":N,"packets_blocked":N}
+ */
+JNIEXPORT jstring JNICALL
+Java_com_asd_firewall_FirewallEngine_nativeGetPerAppStats(
+        JNIEnv* env, jobject /*this*/)
+{
+    if (!g_engine) return env->NewStringUTF("[]");
+
+    std::lock_guard<std::mutex> lk(g_engine->per_app_mtx);
+    std::ostringstream j;
+    j << "[";
+    bool first = true;
+    for (const auto& [pkg, s] : g_engine->per_app_stats) {
+        if (!first) j << ",";
+        j << "{"
+          << "\"pkg\":\""         << escape_json(pkg)  << "\","
+          << "\"bytes_in\":"      << s.bytes_in        << ","
+          << "\"bytes_out\":"     << s.bytes_out       << ","
+          << "\"packets_total\":" << s.packets_total   << ","
+          << "\"packets_blocked\":" << s.packets_blocked
+          << "}";
+        first = false;
+    }
+    j << "]";
+    return env->NewStringUTF(j.str().c_str());
+}
+
+/**
+ * Set the UID → package name map (JSON: {"uid": "pkg.name", ...}).
+ * Called from Kotlin after PackageManager enumeration.
+ */
+JNIEXPORT void JNICALL
+Java_com_asd_firewall_FirewallEngine_nativeSetUidPackageMap(
+        JNIEnv* env, jobject /*this*/, jstring jsonMap)
+{
+    std::string json = jstr(env, jsonMap);
+    std::lock_guard<std::mutex> lk(g_uid_map_mtx);
+    g_uid_to_pkg.clear();
+    // Parse simple {"uid":"pkg"} JSON manually
+    size_t pos = 0;
+    while (pos < json.size()) {
+        auto ks = json.find('"', pos);
+        if (ks == std::string::npos) break;
+        auto ke = json.find('"', ks + 1);
+        if (ke == std::string::npos) break;
+        std::string key = json.substr(ks + 1, ke - ks - 1);
+        auto vs = json.find('"', ke + 1);
+        if (vs == std::string::npos) break;
+        auto ve = json.find('"', vs + 1);
+        if (ve == std::string::npos) break;
+        std::string val = json.substr(vs + 1, ve - vs - 1);
+        try { g_uid_to_pkg[std::stoi(key)] = val; } catch (...) {}
+        pos = ve + 1;
+    }
+    LOGI("UID map loaded: %zu entries", g_uid_to_pkg.size());
+}
+
+/**
+ * Resolve a UID to a package name string.
+ */
+JNIEXPORT jstring JNICALL
+Java_com_asd_firewall_FirewallEngine_nativeResolveUid(
+        JNIEnv* env, jobject /*this*/, jint uid)
+{
+    std::lock_guard<std::mutex> lk(g_uid_map_mtx);
+    auto it = g_uid_to_pkg.find(static_cast<int>(uid));
+    if (it != g_uid_to_pkg.end()) {
+        return env->NewStringUTF(it->second.c_str());
+    }
+    std::string fallback = "uid:" + std::to_string(uid);
+    return env->NewStringUTF(fallback.c_str());
 }
 
 } // extern "C"
