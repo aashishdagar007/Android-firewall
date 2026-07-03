@@ -7,7 +7,6 @@ import androidx.work.WorkerParameters
 import com.asd.firewall.FirewallEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.URL
 
 /**
  * ThreatSyncWorker — Periodically downloads known malicious IPs from public threat intelligence feeds

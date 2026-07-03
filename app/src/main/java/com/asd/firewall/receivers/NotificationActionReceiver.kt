@@ -7,7 +7,6 @@ import android.content.Intent
 import android.util.Log
 import android.widget.Toast
 import com.asd.firewall.FirewallEngine
-import com.asd.firewall.ThreatNotificationManager
 
 /**
  * NotificationActionReceiver — Handles actions triggered directly from threat notifications.
